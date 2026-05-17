@@ -40,19 +40,19 @@ class GPTParameter(NeuralNetworkParameter):
         Constructor for GPTParameter.
 
         :param seed: Random seed.
-        :param epoch: Number of training epochs.
-        :param optimizer: Optimization algorithm.
-        :param initialization: Weight initialization method.
+        :param epoch: Number of epochs.
+        :param optimizer: Optimizer.
+        :param initialization: Weight initialization.
         :param loss: Loss function.
-        :param word_embedding_length: Token embedding dimension (without bias column).
+        :param word_embedding_length: Embedding dimension.
         :param num_heads: Number of attention heads.
         :param vocab_size: Vocabulary size.
-        :param num_layers: Number of stacked transformer blocks.
-        :param epsilon: Small constant for numerical stability in layer normalization.
-        :param ffn_size: Hidden dimension of feed-forward blocks.
-        :param activation_function: Activation function used in feed-forward blocks.
-        :param gamma_values: Gamma (scale) value for each layer normalization (length: 2 * num_layers + 1).
-        :param beta_values: Beta (shift) value for each layer normalization (length: 2 * num_layers + 1).
+        :param num_layers: Number of transformer blocks.
+        :param epsilon: Layer norm stability constant.
+        :param ffn_size: Feed-forward hidden size.
+        :param activation_function: FFN activation function.
+        :param gamma_values: Gamma values for each layer norm.
+        :param beta_values: Beta values for each layer norm.
         """
         super().__init__(seed, epoch, optimizer, initialization, loss, 0.0, 1)
 
@@ -68,7 +68,7 @@ class GPTParameter(NeuralNetworkParameter):
 
     def getL(self) -> int:
         """
-        :return: Embedding dimension including bias column (word_embedding_length + 1).
+        :return: Embedding dimension (word_embedding_length + 1).
         """
         return self.__L
 
@@ -92,13 +92,13 @@ class GPTParameter(NeuralNetworkParameter):
 
     def getNumLayers(self) -> int:
         """
-        :return: Number of stacked transformer blocks.
+        :return: Number of transformer blocks.
         """
         return self.__numLayers
 
     def getEpsilon(self) -> float:
         """
-        :return: Epsilon for layer normalization numerical stability.
+        :return: Epsilon for layer normalization.
         """
         return self.__epsilon
 
@@ -110,57 +110,57 @@ class GPTParameter(NeuralNetworkParameter):
 
     def getFfnSize(self) -> int:
         """
-        :return: Hidden dimension of feed-forward blocks.
+        :return: Feed-forward hidden size.
         """
         return self.__ffnSize
 
     def getActivationFunction(self) -> Function:
         """
-        :return: Activation function used in feed-forward blocks.
+        :return: FFN activation function.
         """
         return self.__activationFunction
 
     def setActivationFunction(self, activation_function: Function) -> None:
         """
-        :param activation_function: New activation function for feed-forward blocks.
+        :param activation_function: New activation function.
         """
         self.__activationFunction = activation_function
 
     def getGammaValue(self, index: int) -> float:
         """
-        :param index: Layer normalization index.
-        :return: Gamma (scale) value for the specified layer norm.
+        :param index: Layer norm index.
+        :return: Gamma value.
         """
         return self.__gammaValues[index]
 
     def getBetaValue(self, index: int) -> float:
         """
-        :param index: Layer normalization index.
-        :return: Beta (shift) value for the specified layer norm.
+        :param index: Layer norm index.
+        :return: Beta value.
         """
         return self.__betaValues[index]
 
     def getGammaValues(self) -> List[float]:
         """
-        :return: Full list of gamma (scale) values for all layer normalizations.
+        :return: All gamma values.
         """
         return self.__gammaValues
 
     def setGammaValues(self, gamma_values: List[float]) -> None:
         """
-        :param gamma_values: New list of gamma values for all layer normalizations.
+        :param gamma_values: New gamma values.
         """
         self.__gammaValues = gamma_values
 
     def getBetaValues(self) -> List[float]:
         """
-        :return: Full list of beta (shift) values for all layer normalizations.
+        :return: All beta values.
         """
         return self.__betaValues
 
     def setBetaValues(self, beta_values: List[float]) -> None:
         """
-        :param beta_values: New list of beta values for all layer normalizations.
+        :param beta_values: New beta values.
         """
         self.__betaValues = beta_values
 
@@ -169,4 +169,4 @@ class GPTParameter(NeuralNetworkParameter):
         :return: String representation of GPTParameter.
         """
         return (f"GPTParameter(L={self.__L}, N={self.__N}, V={self.__V}, "
-                f"numLayers={self.__numLayers}, ffnSize={self.__ffnSize}, epsilon={self.__epsilon})")
+                f"numLayers={self.__numLayers}, ffnSize={self.__ffnSize})")

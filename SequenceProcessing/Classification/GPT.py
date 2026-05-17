@@ -31,17 +31,17 @@ class GPT(ComputationalGraph):
         """
         Constructor for GPT.
 
-        :param parameter: Neural network parameter object (GPTParameter).
+        :param parameter: Neural network parameters.
         """
         super().__init__(parameter)
 
     def __positionalEncoding(self, tensor: Tensor, word_embedding_length: int) -> Tensor:
         """
-        Applies sinusoidal positional encoding to the input tensor.
+        Applies sinusoidal positional encoding.
 
-        :param tensor: Input tensor of shape (T, word_embedding_length).
-        :param word_embedding_length: Token embedding dimension (without bias column).
-        :return: Positionally encoded tensor of the same shape.
+        :param tensor: Input tensor.
+        :param word_embedding_length: Embedding dimension.
+        :return: Positionally encoded tensor.
         """
         values = []
 
@@ -57,15 +57,11 @@ class GPT(ComputationalGraph):
 
     def __createInputs(self, instance: Tensor, word_embedding_length: int) -> Tuple[Tensor, List[int]]:
         """
-        Parses a flat training instance into a positionally encoded embedding tensor and class labels.
+        Parses a flat tensor into embeddings and class labels.
 
-        Each token occupies (word_embedding_length + 1) consecutive values: the embedding followed by the
-        target next-token index.
-
-        :param instance: Flat input tensor of shape (T * (word_embedding_length + 1),).
-        :param word_embedding_length: Token embedding dimension (without bias column).
-        :return: Tuple of (positionally encoded embedding tensor of shape (T, word_embedding_length),
-                           list of target class label indices of length T).
+        :param instance: Flat input tensor.
+        :param word_embedding_length: Embedding dimension.
+        :return: Tuple of (embedding tensor, class label list).
         """
         stride = word_embedding_length + 1
         num_tokens = instance.getShape()[0] // stride
@@ -86,14 +82,12 @@ class GPT(ComputationalGraph):
                              parameter: GPTParameter,
                              ln_index: List[int]) -> ComputationalNode:
         """
-        Applies layer normalization with learnable gamma and beta parameters.
+        Applies layer normalization.
 
-        Uses a single scalar gamma and beta per normalization step, broadcast across the embedding dimension.
-
-        :param input_node: Input computational node of effective shape (T, L).
-        :param parameter: GPT parameter object.
-        :param ln_index: Single-element list used as a mutable counter for gamma/beta indexing.
-        :return: Normalized node of shape (T, L).
+        :param input_node: Input node.
+        :param parameter: GPT parameters.
+        :param ln_index: Counter for gamma/beta indexing.
+        :return: Normalized node.
         """
         input_mean = self.addEdge(input_node, Mean())
         mean_neg = self.addEdge(input_mean, Negation())
@@ -120,14 +114,12 @@ class GPT(ComputationalGraph):
                                    parameter: GPTParameter,
                                    random_generator: random.Random) -> List[ComputationalNode]:
         """
-        Builds causal (masked) multi-head self-attention outputs.
+        Builds masked multi-head self-attention outputs.
 
-        Each token can only attend to itself and preceding tokens.
-
-        :param input_node: Input node of effective shape (T, L).
-        :param parameter: GPT parameter object.
-        :param random_generator: Random number generator for weight initialization.
-        :return: List of N per-head attention output nodes, each of shape (T, dk).
+        :param input_node: Input node.
+        :param parameter: GPT parameters.
+        :param random_generator: Random generator.
+        :return: List of attention output nodes per head.
         """
         nodes = []
 
@@ -170,12 +162,12 @@ class GPT(ComputationalGraph):
                            parameter: GPTParameter,
                            random_generator: random.Random) -> ComputationalNode:
         """
-        Builds a two-layer position-wise feed-forward block: Linear → Activation → Linear.
+        Builds a two-layer feed-forward block.
 
-        :param current: Input node of effective shape (T, L).
-        :param parameter: GPT parameter object.
-        :param random_generator: Random number generator for weight initialization.
-        :return: Output node of shape (T, L).
+        :param current: Input node.
+        :param parameter: GPT parameters.
+        :param random_generator: Random generator.
+        :return: Output node.
         """
         w1 = MultiplicationNode(
             Tensor(
@@ -196,14 +188,9 @@ class GPT(ComputationalGraph):
 
     def train(self, train_set: List[Tensor]) -> None:
         """
-        Builds the GPT computational graph and trains on the given dataset.
+        Trains the GPT model.
 
-        Graph structure per block (pre-norm):
-          x = x + Attention(LayerNorm(x))
-          x = x + FFN(LayerNorm(x))
-        Followed by a final LayerNorm, linear projection to vocab, and softmax.
-
-        :param train_set: List of flat training tensors.
+        :param train_set: Training dataset.
         """
         parameter = self.parameters
         random_generator = random.Random(parameter.getSeed())
@@ -274,10 +261,10 @@ class GPT(ComputationalGraph):
 
     def test(self, test_set: List[Tensor]) -> ClassificationPerformance:
         """
-        Tests the GPT model using teacher forcing over the given test set.
+        Tests the GPT model.
 
-        :param test_set: List of flat test tensors.
-        :return: Classification performance based on next-token prediction accuracy.
+        :param test_set: Test dataset.
+        :return: Classification performance.
         """
         count = 0
         total = 0
@@ -297,10 +284,10 @@ class GPT(ComputationalGraph):
 
     def getOutputValue(self, computational_node: ComputationalNode) -> List[float]:
         """
-        Extracts the argmax predicted class index for each token position from the output node.
+        Returns predicted class indices from the output node.
 
-        :param computational_node: Output node of shape (T, V).
-        :return: List of predicted class indices, one per token position.
+        :param computational_node: Output node.
+        :return: List of predicted class indices.
         """
         class_labels = []
         value = computational_node.getValue()
@@ -321,7 +308,7 @@ class GPT(ComputationalGraph):
 
     def __repr__(self) -> str:
         """
-        :return: String representation of GPT model.
+        :return: String representation of the GPT model.
         """
         parameter = self.parameters
         return (f"GPT(L={parameter.getL()}, N={parameter.getN()}, V={parameter.getV()}, "
