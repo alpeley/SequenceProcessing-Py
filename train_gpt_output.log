@@ -1,0 +1,26 @@
+Loading training data: Datasets/postag-penn-train.txt
+  GPTCorpusDataset(sentences=14850, labels=15, embeddingDim=7)
+  tensors: 14850
+  labels (15): ['ADJ', 'ADP', 'ADV', 'AUX', 'CCONJ', 'DET', 'INTJ', 'NOUN', 'NUM', 'PRON', 'PROPN', 'PUNCT', 'SCONJ', 'VERB', 'X']
+Model: GPT(L=8, N=2, V=15, numLayers=1)
+Training...
+Traceback (most recent call last):
+  File "/Users/alpdalli/Desktop/SequenceProcessing-Py-1/train_gpt.py", line 211, in <module>
+    main()
+  File "/Users/alpdalli/Desktop/SequenceProcessing-Py-1/train_gpt.py", line 177, in main
+    gpt.train(train_tensors)
+  File "/Users/alpdalli/Desktop/SequenceProcessing-Py-1/SequenceProcessing/Classification/GPT.py", line 257, in train
+    self.forwardCalculation()
+  File "/Users/alpdalli/.pyenv/versions/3.11.4/lib/python3.11/site-packages/ComputationalGraph/ComputationalGraph.py", line 397, in forwardCalculation
+    return self.__forwardCalculation(True)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/alpdalli/.pyenv/versions/3.11.4/lib/python3.11/site-packages/ComputationalGraph/ComputationalGraph.py", line 478, in __forwardCalculation
+    child.setValue(function.calculate(current_value))
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/alpdalli/.pyenv/versions/3.11.4/lib/python3.11/site-packages/ComputationalGraph/Function/Softmax.py", line 33, in calculate
+    exp_chunk = [math.exp(val) for val in chunk]
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/alpdalli/.pyenv/versions/3.11.4/lib/python3.11/site-packages/ComputationalGraph/Function/Softmax.py", line 33, in <listcomp>
+    exp_chunk = [math.exp(val) for val in chunk]
+                 ^^^^^^^^^^^^^
+OverflowError: math range error
