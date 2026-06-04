@@ -30,7 +30,6 @@ class GPT(ComputationalGraph):
     def __init__(self, parameter: NeuralNetworkParameter):
         """
         Constructor for GPT.
-
         :param parameter: Neural network parameters.
         """
         super().__init__(parameter)
@@ -48,10 +47,15 @@ class GPT(ComputationalGraph):
         for i in range(tensor.getShape()[0]):
             for j in range(tensor.getShape()[1]):
                 val = tensor.getValue((i, j))
+
                 if j % 2 == 0:
-                    values.append(val + math.sin((i + 1.0) / math.pow(10000, j / word_embedding_length)))
+                    values.append(
+                        val + math.sin((i + 1.0) / math.pow(10000, j / word_embedding_length))
+                    )
                 else:
-                    values.append(val + math.cos((i + 1.0) / math.pow(10000, (j - 1.0) / word_embedding_length)))
+                    values.append(
+                        val + math.cos((i + 1.0) / math.pow(10000, (j - 1.0) / word_embedding_length))
+                    )
 
         return Tensor(values, tensor.getShape())
 
@@ -59,28 +63,37 @@ class GPT(ComputationalGraph):
         """
         Parses a flat tensor into embeddings and class labels.
 
+        Each token is represented as:
+            [embedding_0, embedding_1, ..., embedding_n, label]
+
         :param instance: Flat input tensor.
         :param word_embedding_length: Embedding dimension.
-        :return: Tuple of (embedding tensor, class label list).
+        :return: Tuple of embedding tensor and class label list.
         """
         stride = word_embedding_length + 1
         num_tokens = instance.getShape()[0] // stride
+
         values = []
         class_labels = []
 
         for i in range(num_tokens):
             base = i * stride
+
             for j in range(word_embedding_length):
                 values.append(instance.getValue((base + j,)))
+
             class_labels.append(int(instance.getValue((base + word_embedding_length,))))
 
         embedding_tensor = Tensor(values, (num_tokens, word_embedding_length))
+
         return self.__positionalEncoding(embedding_tensor, word_embedding_length), class_labels
 
-    def __layerNormalization(self,
-                             input_node: ComputationalNode,
-                             parameter: GPTParameter,
-                             ln_index: List[int]) -> ComputationalNode:
+    def __layerNormalization(
+            self,
+            input_node: ComputationalNode,
+            parameter: GPTParameter,
+            ln_index: List[int]
+    ) -> ComputationalNode:
         """
         Applies layer normalization.
 
@@ -100,19 +113,31 @@ class GPT(ComputationalGraph):
         normalized = self.addEdge(centered, inv_root_variance, False, True)
 
         gamma_data = [parameter.getGammaValue(ln_index[0])] * parameter.getL()
-        gamma_node = MultiplicationNode(True, False, Tensor(gamma_data, (1, parameter.getL())), True)
+        gamma_node = MultiplicationNode(
+            True,
+            False,
+            Tensor(gamma_data, (1, parameter.getL())),
+            True
+        )
         scaled = self.addEdge(normalized, gamma_node)
 
         beta_data = [parameter.getBetaValue(ln_index[0])] * parameter.getL()
-        beta_node = ComputationalNode(True, False, Tensor(beta_data, (1, parameter.getL())))
+        beta_node = ComputationalNode(
+            True,
+            False,
+            Tensor(beta_data, (1, parameter.getL()))
+        )
+
         ln_index[0] += 1
 
         return self.addAdditionEdge(scaled, beta_node, False)
 
-    def __maskedMultiHeadAttention(self,
-                                   input_node: ComputationalNode,
-                                   parameter: GPTParameter,
-                                   random_generator: random.Random) -> List[ComputationalNode]:
+    def __maskedMultiHeadAttention(
+            self,
+            input_node: ComputationalNode,
+            parameter: GPTParameter,
+            random_generator: random.Random
+    ) -> List[ComputationalNode]:
         """
         Builds masked multi-head self-attention outputs.
 
@@ -153,14 +178,17 @@ class GPT(ComputationalGraph):
             qk_scaled = self.addEdge(qk, MultiplyByConstant(1.0 / math.sqrt(parameter.getDk())))
             qk_masked = self.addEdge(qk_scaled, Mask())
             attn_weights = self.addEdge(qk_masked, Softmax())
+
             nodes.append(self.addEdge(attn_weights, v))
 
         return nodes
 
-    def __feedForwardBlock(self,
-                           current: ComputationalNode,
-                           parameter: GPTParameter,
-                           random_generator: random.Random) -> ComputationalNode:
+    def __feedForwardBlock(
+            self,
+            current: ComputationalNode,
+            parameter: GPTParameter,
+            random_generator: random.Random
+    ) -> ComputationalNode:
         """
         Builds a two-layer feed-forward block.
 
@@ -184,6 +212,7 @@ class GPT(ComputationalGraph):
                 (parameter.getFfnSize() + 1, parameter.getL())
             )
         )
+
         return self.addEdge(hidden, w2)
 
     def train(self, train_set: List[Tensor]) -> None:
@@ -206,12 +235,14 @@ class GPT(ComputationalGraph):
 
             attn_nodes = self.__maskedMultiHeadAttention(ln1, parameter, random_generator)
             concat_attn = self.concatEdges(attn_nodes, 1)
+
             w_proj = MultiplicationNode(
                 Tensor(
                     parameter.initializeWeights(parameter.getL(), parameter.getL(), random_generator),
                     (parameter.getL(), parameter.getL())
                 )
             )
+
             attn_out = self.addEdge(concat_attn, w_proj)
             current = self.addAdditionEdge(current, attn_out, False)
 
@@ -227,12 +258,19 @@ class GPT(ComputationalGraph):
                 (parameter.getL(), parameter.getV())
             )
         )
+
         logits = self.addEdge(final_ln, w_out)
+
         self.output_node = self.addEdge(logits, Softmax())
 
         class_label_node = ComputationalNode()
         self.input_nodes.append(class_label_node)
-        self.addFunctionEdge([self.output_node, class_label_node], parameter.getLossFunction(), False)
+
+        self.addFunctionEdge(
+            [self.output_node, class_label_node],
+            parameter.getLossFunction(),
+            False
+        )
 
         word_embedding_length = parameter.getL() - 1
 
@@ -244,12 +282,15 @@ class GPT(ComputationalGraph):
 
             for instance in train_set:
                 embedding_tensor, class_labels = self.__createInputs(instance, word_embedding_length)
+
                 self.input_nodes[0].setValue(embedding_tensor)
 
                 class_label_values = []
+
                 for label in class_labels:
                     for j in range(parameter.getV()):
                         class_label_values.append(1.0 if j == label else 0.0)
+
                 self.input_nodes[1].setValue(
                     Tensor(class_label_values, (len(class_labels), parameter.getV()))
                 )
@@ -270,15 +311,33 @@ class GPT(ComputationalGraph):
         total = 0
         word_embedding_length = self.parameters.getL() - 1
 
+        prediction_counts = {}
+        gold_counts = {}
+
         for instance in test_set:
             embedding_tensor, gold_labels = self.__createInputs(instance, word_embedding_length)
+
             self.input_nodes[0].setValue(embedding_tensor)
+
             predictions = self.predict()
 
             for pred, gold in zip(predictions, gold_labels):
-                if int(pred) == gold:
+                pred = int(pred)
+                gold = int(gold)
+
+                prediction_counts[pred] = prediction_counts.get(pred, 0) + 1
+                gold_counts[gold] = gold_counts.get(gold, 0) + 1
+
+                if pred == gold:
                     count += 1
+
                 total += 1
+
+        print("  prediction distribution:", prediction_counts)
+        print("  gold distribution:", gold_counts)
+
+        if total == 0:
+            return ClassificationPerformance(0.0)
 
         return ClassificationPerformance((count + 0.0) / total)
 
@@ -298,6 +357,7 @@ class GPT(ComputationalGraph):
 
             for j in range(value.getShape()[1]):
                 current = value.getValue((i, j))
+
                 if current > max_val:
                     max_val = current
                     index = float(j)
@@ -311,5 +371,8 @@ class GPT(ComputationalGraph):
         :return: String representation of the GPT model.
         """
         parameter = self.parameters
-        return (f"GPT(L={parameter.getL()}, N={parameter.getN()}, V={parameter.getV()}, "
-                f"numLayers={parameter.getNumLayers()})")
+
+        return (
+            f"GPT(L={parameter.getL()}, N={parameter.getN()}, V={parameter.getV()}, "
+            f"numLayers={parameter.getNumLayers()})"
+        )
