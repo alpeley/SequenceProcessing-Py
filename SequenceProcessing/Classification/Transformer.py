@@ -32,6 +32,7 @@ class Transformer(ComputationalGraph):
     __dictionary: VectorizedDictionary
     __start_index: int
     __end_index: int
+    __decoder_input_data: List[float]
 
     def __init__(self,
                  parameter: NeuralNetworkParameter,
@@ -46,11 +47,12 @@ class Transformer(ComputationalGraph):
         self.__dictionary = dictionary
         self.__start_index = -1
         self.__end_index = -1
+        self.__decoder_input_data = []
 
         for k in range(self.__dictionary.size()):
-            if self.__dictionary.getWord(k).getName() == "<S>":
+            if self.__dictionary.getWordWithIndex(k).getName() == "<S>":
                 self.__start_index = k
-            elif self.__dictionary.getWord(k).getName() == "</S>":
+            elif self.__dictionary.getWordWithIndex(k).getName() == "</S>":
                 self.__end_index = k
 
     def getDictionary(self) -> VectorizedDictionary:
@@ -469,22 +471,17 @@ class Transformer(ComputationalGraph):
         :param vector: Input vector.
         :param node: Computational node.
         """
-        data = []
-
-        if node.getValue() is not None:
-            data = list(node.getValue().getData())
-
         for i in range(vector.size()):
             if i % 2 == 0:
-                data.append(
+                self.__decoder_input_data.append(
                     vector.getValue(i) + math.sin(bound / math.pow(10000, i / vector.size()))
                 )
             else:
-                data.append(
+                self.__decoder_input_data.append(
                     vector.getValue(i) + math.cos(bound / math.pow(10000, (i - 1.0) / vector.size()))
                 )
 
-        node.setValue(Tensor(data, (bound, vector.size())))
+        node.setValue(Tensor(self.__decoder_input_data, (bound, vector.size())))
 
     def test(self, test_set: List[Tensor]) -> ClassificationPerformance:
         """
@@ -501,16 +498,23 @@ class Transformer(ComputationalGraph):
                 instance,
                 self.input_nodes[0],
                 ComputationalNode(False, False),
-                self.__dictionary.getWord(0).getVector().size()
+                self.__dictionary.getWordWithIndex(0).getVector().size()
             )
+
+            encoder_value = self.input_nodes[0].getValue()
+            encoder_data = list(encoder_value.getData())
+            encoder_shape = encoder_value.getShape()
 
             j = 1
             current_word_index = self.__start_index
+            self.__decoder_input_data = []
+            self.input_nodes[1].setValue(None)
 
             while True:
+                self.input_nodes[0].setValue(Tensor(encoder_data, encoder_shape))
                 self.setInputNode(
                     j,
-                    self.__dictionary.getWord(current_word_index).getVector(),
+                    self.__dictionary.getWordWithIndex(current_word_index).getVector(),
                     self.input_nodes[1]
                 )
 
